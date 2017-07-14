@@ -1,0 +1,263 @@
+  
+# Student Exploratory Data Analysis
+### By Sargam Shah
+ 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+ 
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages  
+library(dplyr)
+library(GGally)
+library(reshape2)
+library(gridExtra)
+library(memisc)
+library(ggplot2)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data # 
+setwd('C:/Users/Sargam/Desktop/udacity/retherichardsgroupquadratics')
+std <- read.csv('student.csv')
+
+```
+
+In this project, I will use R and apply exploratory data analysis techniques to explore relationships in one variable to multiple variables and to explore a selected data set containing Student information for distributions, outliers, and anomalies.
+
+The original dataset is available here: Note: Private Data. Ask the author for permissions.
+
+ 
+I want to take a look at the key statistics, data types, summary etc. of the student data.
+```{r echo=FALSE, Univariate_Plots}
+
+#Use a few functions to evaluate some basic attributes of the dataset
+dim(std)
+names(std)
+str(std)
+head(std)
+summary(std)
+
+
+```
+
+I can see a lot of negative values in Class Size, Growth, and a lot of NAs in varoius fields. 
+After cleaning the data, lets see the stats.
+
+ 
+
+```{r echo=FALSE, }
+# Clean the dataset
+
+d1 <- std[std$ClassSize_kthru3 > 0 & !is.na(std$ClassSize_kthru3),]
+d1 <- d1[ !is.na(d1$ClassSize_4thru6) & d1$Growth > 0, ]
+
+summary(d1)
+dim(d1)
+
+# Feature Selection
+
+# split the data into training and testing
+## 60% of the sample size
+smp_size <- floor(0.60 * nrow(d1))
+
+## set the seed to make your partition reproductible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(d1)), size = smp_size)
+
+train <- d1[train_ind, ]
+test <- d1[-train_ind, ]
+
+dim(train)
+dim(test)
+```
+
+I also split the data into training and testing by 60:40 ratio.
+Thus there are 222 records in the training set and 149 records in the testing set.
+
+## Univariate Analysis
+
+### Lets see what is the class size that most schools prefer.
+```{r echo=FALSE, }
+x<- ggplot(aes(x = ClassSize_kthru3), data = train) +
+  geom_bar()  + scale_x_continuous(limits=c(14,23))
+y<- ggplot(aes(x = ClassSize_4thru6), data = train) +
+  geom_bar()
+grid.arrange(x,y)
+
+```
+ 
+It can be seen from the graphs that majority of the schools have a class size of 19 for grades k through 3.
+Also, most schools have class size in the range from 23 to 34 for grades 4 through 6. As the class size increases, the number of schools prefering those class size drops. For example, there are only 3 schools that prefer class size 50.
+
+## Bivariate Analysis
+
+Lets go through the nature of the parents who enroll their students in the schools. We have parents who are high school graduates, not high school graduates, who had gone to grad school, who went to some school. 
+
+```{r echo=FALSE, }
+# Parents
+
+
+a1 <- ggplot(train, aes(y=Not_HSg, x=ClassSize_4thru6)) + stat_summary(fun.y="sum", geom="bar")
+a2 <- ggplot(train, aes(y=HSg, x=ClassSize_4thru6)) + stat_summary(fun.y="sum", geom="bar")
+a3 <- ggplot(train, aes(y=Grad_school, x=ClassSize_4thru6)) + stat_summary(fun.y="sum", geom="bar")
+a4 <- ggplot(train, aes(y=Some_college, x=ClassSize_4thru6)) + stat_summary(fun.y="sum", geom="bar")
+
+
+grid.arrange(a1,a2,a3,a4)
+
+b1 <- ggplot(train, aes(y=Not_HSg, x=ClassSize_kthru3)) + stat_summary(fun.y="sum", geom="bar", fill = "#FF6666")
+b2 <- ggplot(train, aes(y=HSg, x=ClassSize_kthru3)) + stat_summary(fun.y="sum", geom="bar", fill = "#FF6666")
+b3 <- ggplot(train, aes(y=Grad_school, x=ClassSize_kthru3))+ stat_summary(fun.y="sum", geom="bar", fill = "#FF6666")
+b4 <- ggplot(train, aes(y=Some_college, x=ClassSize_kthru3)) + stat_summary(fun.y="sum", geom="bar", fill = "#FF6666")
+
+
+grid.arrange(b1,b2,b3,b4)
+
+```
+
+It can be seen that parents, whether they are High school graduates or College graduates, prefer smaller classes for
+their children whether they are kindergarden through third grade or fourth through sixth. 
+For kindergarden through 3, the class size expected is 18 to 21. 
+For 4th to 6th grade, any class size between 23 to 35 is expected. There are hardly any parents who prefer class size of 36 to 50. It is highly discouraged for a school to have a class size greater than 35. 
+
+### Let us see how the class size affects the performance. 
+
+
+```{r echo=FALSE, }
+  
+a <- ggplot(train, aes(y=Performance_2010, x=ClassSize_4thru6)) + stat_summary(fun.y="max", geom="line")
+ 
+  
+b <- ggplot(train, aes(y=Performance_2010, x=ClassSize_kthru3)) + stat_summary(fun.y="max", geom="line")
+
+grid.arrange(a,b) 
+
+
+ 
+```
+
+It can be concluded that, for class size 4 through 6, ther is a sharp decrease in performance as calss size goes beyond 45. 
+
+For class size k through 3, for very small class size of 14, the performance is very low. However, there is a steep surge in performance from class size 16 and it continues till 20. For larger class sizes than 20, the performance start to decline. 
+
+Thus, students who belong to smaller class size perform well. 
+
+### Let us take a look at how it affects the growth. 
+
+```{r echo=FALSE, }
+a <- ggplot(train, aes(y=Growth, x=ClassSize_4thru6)) + stat_summary(fun.y="max", geom="line")
+ 
+  
+b <- ggplot(train, aes(y=Growth, x=ClassSize_kthru3)) + stat_summary(fun.y="max", geom="line")
+
+grid.arrange(a,b) 
+
+
+
+# ggpairs(std) + theme(axis.text = element_blank(), axis.title=element_text(size=5))
+```
+
+You can see similar results. As the class size increases, the growth of the student decreases with a greater rate. 
+
+
+```{r echo=FALSE, }
+
+
+#train$class <- with(train, cut(ClassSize_4thru6, breaks = c(0,35,50), ordered = TRUE)) 
+#head(train$class)
+
+
+```
+
+### Let us check whether a school belonging to a certain district affects our findings.
+
+```{r echo=FALSE, }
+ggplot(train, aes(x=DistrictNumber, y=ClassSize_kthru3)) + stat_summary(fun.y="mean", geom="bar")
+ggplot(train, aes(x=DistrictNumber, y=ClassSize_4thru6)) + stat_summary(fun.y="mean", geom="bar")
+
+```
+
+
+Since there are many district levels, we got so many bars. However, we can see there is no abrubt decline in the bar lengths. Thus, there is no particular district that opposes our findings to a great extent. 
+
+
+ 
+## Validation:
+
+I have split the dataset into training and testing in order to prove the results. 
+Let us generate our graphs on the testing data.
+
+### Univariate Analysis
+```{r echo=FALSE, }
+x<- ggplot(aes(x = ClassSize_kthru3), data = test) +
+  geom_bar()  + scale_x_continuous(limits=c(14,23))
+y<- ggplot(aes(x = ClassSize_4thru6), data = test) +
+  geom_bar()
+grid.arrange(x,y)
+```
+
+
+### Bivariate Analysis
+
+```{r echo=FALSE,}
+a1 <- ggplot(test, aes(y=Not_HSg, x=ClassSize_4thru6)) + stat_summary(fun.y="sum", geom="bar")
+a2 <- ggplot(test, aes(y=HSg, x=ClassSize_4thru6)) + stat_summary(fun.y="sum", geom="bar")
+a3 <- ggplot(test, aes(y=Grad_school, x=ClassSize_4thru6)) + stat_summary(fun.y="sum", geom="bar")
+a4 <- ggplot(test, aes(y=Some_college, x=ClassSize_4thru6)) + stat_summary(fun.y="sum", geom="bar")
+
+
+grid.arrange(a1,a2,a3,a4)
+
+b1 <- ggplot(test, aes(y=Not_HSg, x=ClassSize_kthru3)) + stat_summary(fun.y="sum", geom="bar")
+b2 <- ggplot(test, aes(y=HSg, x=ClassSize_kthru3)) + stat_summary(fun.y="sum", geom="bar")
+b3 <- ggplot(test, aes(y=Grad_school, x=ClassSize_kthru3))+ stat_summary(fun.y="sum", geom="bar")
+b4 <- ggplot(test, aes(y=Some_college, x=ClassSize_kthru3)) + stat_summary(fun.y="sum", geom="bar")
+
+
+grid.arrange(b1,b2,b3,b4)
+
+a <- ggplot(test, aes(y=Performance_2010, x=ClassSize_4thru6)) + stat_summary(fun.y="max", geom="line")
+ 
+  
+b <- ggplot(test, aes(y=Performance_2010, x=ClassSize_kthru3)) + stat_summary(fun.y="max", geom="line")
+
+grid.arrange(a,b) 
+
+a <- ggplot(test, aes(y=Growth, x=ClassSize_4thru6)) + stat_summary(fun.y="max", geom="line")
+ 
+  
+b <- ggplot(test, aes(y=Growth, x=ClassSize_kthru3)) + stat_summary(fun.y="max", geom="line")
+
+grid.arrange(a,b)
+
+ggplot(test, aes(x=DistrictNumber, y=ClassSize_kthru3)) + stat_summary(fun.y="mean", geom="bar")
+ggplot(test, aes(x=DistrictNumber, y=ClassSize_4thru6)) + stat_summary(fun.y="mean", geom="bar")
+
+
+
+```
+
+Our findings have been validated.
+
+## Conclusion:
+
+1. Most parents prefer smaller class sizes.
+2. District does not affect the class size.
+3. Smaller sizes have higher performance.
+4. Smaller class size have higher growth rate.
+
+#### The preferred class size for students in kindergarden through grade 3 is 18 to 21. 
+#### The preferred class size for students from grade 4 through 6 is 23 through 35.
+#### However, a class size of 29 is highly preferred. 
+
+ 
+
+
+
+
+ 
